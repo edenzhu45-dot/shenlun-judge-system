@@ -1,0 +1,189 @@
+# Render部署配置文件
+# 遵循技术升级指南的优化方案
+
+services:
+  # 主Web服务
+  - type: web
+    name: essay-grading-web
+    env: python
+    region: oregon  # 美国俄勒冈，延迟较低
+    plan: free  # 免费计划，512MB内存
+    
+    # 构建配置
+    buildCommand: |
+      pip install -r requirements.txt
+      mkdir -p uploads
+      mkdir -p logs
+      
+    # 启动命令（优化内存配置）
+    startCommand: |
+      python -m backend.app.main
+      
+    # 环境变量
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: PORT
+        value: 8000
+      - key: UVICORN_WORKERS
+        value: 1  # 512MB内存下设为1
+      - key: UVICORN_LIMIT_CONCURRENCY
+        value: 15  # 限制并发连接数
+      - key: UVICORN_TIMEOUT_KEEP_ALIVE
+        value: 65  # 保持连接超时
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: MAX_UPLOAD_SIZE
+        value: 52428800  # 50MB
+      - key: QUERY_PAGE_SIZE
+        value: 20  # 分页大小
+      - key: MEMORY_WARNING_THRESHOLD_MB
+        value: 350  # 内存警告阈值
+      - key: MEMORY_CRITICAL_THRESHOLD_MB
+        value: 450  # 内存临界阈值
+      - key: MONITORING_INTERVAL
+        value: 30  # 监控间隔（秒）
+      - key: CACHE_TTL_USER_HISTORY
+        value: 300  # 用户历史缓存5分钟
+      - key: CACHE_TTL_QUESTION_BANK
+        value: 1800  # 题库缓存30分钟
+      - key: CACHE_TTL_CONFIG
+        value: 600  # 配置缓存10分钟
+      - key: MATERIAL_SUMMARY_LENGTH
+        value: 2000  # 材料摘要长度
+      - key: DEEPSEEK_MAX_CONTEXT_LENGTH
+        value: 8000  # DeepSeek最大上下文长度
+      - key: DEEPSEEK_MAX_TOKENS
+        value: 2000  # 最大生成token数
+      - key: DEEPSEEK_TEMPERATURE
+        value: 0.7  # 温度参数
+      - key: DEEPSEEK_TIMEOUT
+        value: 120  # 超时时间（秒）
+      - key: REDIS_MAX_CONNECTIONS
+        value: 10  # Redis最大连接数
+      - key: REDIS_CONNECTION_TIMEOUT
+        value: 5  # 连接超时（秒）
+      - key: REDIS_SOCKET_TIMEOUT
+        value: 5  # Socket超时（秒）
+      - key: REDIS_RETRY_ON_TIMEOUT
+        value: true  # 超时重试
+      - key: REDIS_HEALTH_CHECK_INTERVAL
+        value: 30  # 健康检查间隔（秒）
+      - key: WORKER_POLL_INTERVAL
+        value: 2  # Worker轮询间隔（秒）
+      - key: WORKER_MAX_CONCURRENT_TASKS
+        value: 3  # Worker最大并发任务数
+      - key: WORKER_TASK_TIMEOUT
+        value: 300  # 任务超时时间（秒）
+      - key: LOG_TO_FILE
+        value: true  # 记录到文件
+      - key: CORS_ORIGINS
+        value: "*"  # CORS允许的源
+        
+    # 健康检查
+    healthCheckPath: /health
+    initialDelaySec: 30  # 初始延迟
+    periodSec: 60  # 检查间隔
+    timeoutSec: 10  # 超时时间
+    successThreshold: 1  # 成功阈值
+    failureThreshold: 3  # 失败阈值
+    
+    # 自动缩放（免费计划不支持，保留配置）
+    # autoScaling:
+    #   minInstances: 1
+    #   maxInstances: 1
+    #   targetMemoryPercent: 70
+    #   targetCPUPercent: 70
+    
+    # 磁盘（免费计划512MB）
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1  # 1GB磁盘空间
+    
+    # 网络
+    httpPort: 8000
+    internalPort: 8000
+    
+  # 后台Worker服务
+  - type: worker
+    name: essay-grading-worker
+    env: python
+    region: oregon
+    plan: free  # 免费计划，512MB内存
+    
+    # 构建配置
+    buildCommand: |
+      pip install -r requirements.txt
+      mkdir -p uploads
+      mkdir -p logs
+      
+    # 启动命令
+    startCommand: |
+      python run_worker.py
+      
+    # 环境变量（与Web服务共享大部分配置）
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: WORKER_POLL_INTERVAL
+        value: 2
+      - key: WORKER_MAX_CONCURRENT_TASKS
+        value: 3
+      - key: WORKER_TASK_TIMEOUT
+        value: 300
+      - key: MEMORY_WARNING_THRESHOLD_MB
+        value: 350
+      - key: MEMORY_CRITICAL_THRESHOLD_MB
+        value: 450
+      - key: MONITORING_INTERVAL
+        value: 30
+      - key: LOG_TO_FILE
+        value: true
+      
+    # 磁盘
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+
+# 数据库服务（使用外部Supabase，Render内不部署）
+# 注意：Supabase和Redis需要在外部配置
+
+# 环境变量分组（需要在Render Dashboard中设置）
+# 必需的环境变量：
+# - DEEPSEEK_API_KEY: DeepSeek API密钥
+# - DEEPSEEK_BASE_URL: DeepSeek API基础URL
+# - SUPABASE_URL: Supabase项目URL
+# - SUPABASE_KEY: Supabase API密钥
+# - SUPABASE_SERVICE_KEY: Supabase服务密钥（可选）
+# - REDIS_URL: Redis连接URL
+# - CLOUDFLARE_R2_ACCOUNT_ID: Cloudflare R2账户ID
+# - CLOUDFLARE_R2_ACCESS_KEY_ID: R2访问密钥ID
+# - CLOUDFLARE_R2_SECRET_ACCESS_KEY: R2秘密访问密钥
+# - CLOUDFLARE_R2_BUCKET_NAME: R2存储桶名称
+# - CLOUDFLARE_R2_PUBLIC_URL: R2公共URL（可选）
+
+# 部署说明：
+# 1. 在Render Dashboard中创建新Web Service
+# 2. 连接GitHub仓库
+# 3. 设置环境变量
+# 4. 部署服务
+# 5. 创建Worker服务（同样步骤）
+
+# 内存优化说明：
+# - 免费计划限制512MB内存
+# - 设置UVICORN_WORKERS=1避免内存竞争
+# - 设置合理的连接限制和超时
+# - 实现流式处理和分页查询
+# - 使用R2存储大字段数据
+
+# 监控和告警：
+# - 内置内存监控服务
+# - 定期健康检查
+# - 日志记录到文件
+# - 可集成外部监控服务

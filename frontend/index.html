@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>申论智能辅助判卷系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-processing {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-failed {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-graduation-cap text-2xl"></i>
+                    <h1 class="text-2xl font-bold">申论智能判卷系统</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="historyBtn" class="hover:bg-white/20 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-history mr-2"></i>历史记录
+                    </button>
+                    <button id="helpBtn" class="hover:bg-white/20 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-question-circle mr-2"></i>帮助
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 左侧：上传和判卷 -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- 上传卡片 -->
+                <div class="card p-6 fade-in">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-blue-100 p-3 rounded-full mr-4">
+                            <i class="fas fa-file-upload text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">上传申论PDF</h2>
+                            <p class="text-gray-600">上传您的申论PDF文件，系统将自动进行智能判卷</p>
+                        </div>
+                    </div>
+                    
+                    <form id="uploadForm" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">用户ID</label>
+                                <input type="number" id="userId" required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="请输入用户ID">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">激活码</label>
+                                <input type="text" id="activationCode" required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="请输入激活码">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">题目（可选）</label>
+                            <textarea id="question" rows="3"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="请输入题目内容，如果PDF中已包含题目可留空"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">上传PDF文件</label>
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition"
+                                id="dropZone">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                                <p class="text-gray-600 mb-2">拖放文件到此处，或点击选择文件</p>
+                                <p class="text-sm text-gray-500 mb-4">支持PDF格式，最大50MB</p>
+                                <input type="file" id="pdfFile" accept=".pdf" class="hidden">
+                                <button type="button" id="selectFileBtn" class="btn-primary">
+                                    <i class="fas fa-folder-open mr-2"></i>选择文件
+                                </button>
+                            </div>
+                            <div id="fileInfo" class="mt-4 hidden">
+                                <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-file-pdf text-red-500 text-xl mr-3"></i>
+                                        <div>
+                                            <p id="fileName" class="font-medium"></p>
+                                            <p id="fileSize" class="text-sm text-gray-500"></p>
+                                        </div>
+                                    </div>
+                                    <button type="button" id="removeFileBtn" class="text-red-500 hover:text-red-700">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button type="submit" id="submitBtn" class="btn-primary">
+                                <i class="fas fa-paper-plane mr-2"></i>开始判卷
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 判卷进度 -->
+                <div id="progressSection" class="card p-6 hidden fade-in">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-green-100 p-3 rounded-full mr-4">
+                            <i class="fas fa-tasks text-green-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">判卷进度</h2>
+                            <p class="text-gray-600">系统正在处理您的申论，请稍候...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span id="progressText" class="font-medium">正在上传文件...</span>
+                                <span id="progressPercent" class="font-bold">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="progressSteps" class="space-y-4">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                    <i class="fas fa-check text-blue-600"></i>
+                                </div>
+                                <span class="flex-1">文件上传</span>
+                                <span id="step1Time" class="text-sm text-gray-500"></span>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                                <span class="flex-1">PDF解析</span>
+                                <span id="step2Time" class="text-sm text-gray-500"></span>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
+                                    <i class="fas fa-clock text-gray-400"></i>
+                                </div>
+                                <span class="flex-1">AI判卷</span>
+                                <span id="step3Time" class="text-sm text-gray-500"></span>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
+                                    <i class="fas fa-clock text-gray-400"></i>
+                                </div>
+                                <span class="flex-1">结果生成</span>
+                                <span id="step4Time" class="text-sm text-gray-500"></span>
+                            </div>
+                        </div>
+                        
+                        <div id="taskInfo" class="bg-gray-50 p-4 rounded-lg hidden">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium">任务ID: <span id="taskId" class="font-mono"></span></p>
+                                    <p class="text-sm text-gray-500">您可以通过此ID查询判卷结果</p>
+                                </div>
+                                <button id="copyTaskIdBtn" class="text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-copy mr-1"></i>复制
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 判卷结果 -->
+                <div id="resultSection" class="card p-6 hidden fade-in">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-purple-100 p-3 rounded-full mr-4">
+                            <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">判卷结果</h2>
+                            <p class="text-gray-600">AI对您申论的评分和分析</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <!-- 总分 -->
+                        <div class="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                            <p class="text-gray-600 mb-2">总分</p>
+                            <div class="flex items-center justify-center">
+                                <span id="totalScore" class="text-6xl font-bold text-blue-600">0</span>
+                                <span class="text-2xl text-gray-500 ml-2">/100</span>
+                            </div>
+                            <div class="mt-4">
+                                <div class="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800">
+                                    <i class="fas fa-star mr-2"></i>
+                                    <span id="scoreLevel">等待评分</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 各项得分 -->
+                        <div>
+                            <h3 class="text-lg font-bold mb-4">各项得分</h3>
+                            <div id="scoreDetails" class="space-y-4">
+                                <!-- 得分项将通过JS动态生成 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 评价和建议 -->
+                        <div>
+                            <h3 class="text-lg font-bold mb-4">评价和建议</h3>
+                            <div id="evaluation" class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-gray-600">等待评价生成...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div class="flex justify-between pt-6 border-t border-gray-200">
+                            <button id="downloadResultBtn" class="btn-primary">
+                                <i class="fas fa-download mr-2"></i>下载完整报告
+                            </button>
+                            <button id="newUploadBtn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                                <i class="fas fa-plus mr-2"></i>新的判卷
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：信息和历史 -->
+            <div class="space-y-8">
+                <!-- 系统信息 -->
+                <div class="card p-6">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-indigo-100 p-3 rounded-full mr-4">
+                            <i class="fas fa-info-circle text-indigo-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">系统信息</h2>
+                            <p class="text-gray-600">当前系统状态和统计</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-gray-600">系统状态</span>
+                            <span id="systemStatus" class="status-badge status-completed">正常</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-gray-600">今日判卷</span>
+                            <span id="todayCount" class="font-bold">0</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-gray-600">响应时间</span>
+                            <span id="responseTime" class="font-bold">-- ms</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-gray-600">内存使用</span>
+                            <span id="memoryUsage" class="font-bold">-- MB</span>
+                        </div>
+                    </div>
+                    
+                    <button id="refreshSystemInfoBtn" class="w-full mt-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        <i class="fas fa-sync-alt mr-2"></i>刷新信息
+                    </button>
+                </div>
+                
+                <!-- 最近历史 -->
+                <div class="card p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center">
+                            <div class="bg-amber-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-history text-amber-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold">最近历史</h2>
+                                <p class="text-gray-600">您最近的判卷记录</p>
+                            </div>
+                        </div>
+                        <button id="viewAllHistoryBtn" class="text-blue-600 hover:text-blue-800">
+                            查看全部
+                        </button>
+                    </div>
+                    
+                    <div id="recentHistory" class="space-y-4">
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-inbox text-3xl mb-3"></i>
+                            <p>暂无历史记录</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 使用说明 -->
+                <div class="card p-6">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-green-100 p-3 rounded-full mr-4">
+                            <i class="fas fa-question-circle text-green-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">使用说明</h2>
+                            <p class="text-gray-600">快速了解如何使用系统</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-2 rounded-full mr-3 mt-1">
+                                <span class="text-blue-600 font-bold text-sm">1</span>
+                            </div>
+                            <p>填写用户ID和激活码</p>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-2 rounded-full mr-3 mt-1">
+                                <span class="text-blue-600 font-bold text-sm">2</span>
+                            </div>
+                            <p>上传申论PDF文件（可选填题目）</p>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-2 rounded-full mr-3 mt-1">
+                                <span class="text-blue-600 font-bold text-sm">3</span>
+                            </div>
+                            <p>等待AI智能判卷（约1-3分钟）</p>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-2 rounded-full mr-3 mt-1">
+                                <span class="text-blue-600 font-bold text-sm">4</span>
+                            </div>
+                            <p>查看详细评分和改进建议</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 历史记录模态框 -->
+    <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+                <div class="flex justify-between items-center p-6 border-b">
+                    <h3 class="text-xl font-bold">历史记录</h3>
+                    <button id="closeHistoryModalBtn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[60vh]">
+                    <div id="fullHistory" class="space-y-4">
+                        <!-- 历史记录将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 帮助模态框 -->
+    <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl w-full max-w-3xl max-h-[80vh] overflow-hidden">
+                <div class="flex justify-between items-center p-6 border-b">
+                    <h3 class="text-xl font-bold">帮助中心</h3>
+                    <button id="closeHelpModalBtn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[60vh]">
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="text-lg font-bold mb-2">常见问题</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="font-medium mb-1">Q: 系统支持哪些文件格式？</p>
+                                    <p class="text-gray-600">A: 目前仅支持PDF格式，最大文件大小为50MB。</p>
+                                </div>
+                                <div>
+                                    <p class="font-medium mb-1">Q: 判卷需要多长时间？</p>
+                                    <p class="text-gray-600">A: 通常需要1-3分钟，具体取决于文件大小和系统负载。</p>
+                                </div>
+                                <div>
+                                    <p class="font-medium mb-1">Q: 如何获取激活码？</p>
+                                    <p class="text-gray-600">A: 请联系系统管理员获取激活码。</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="text-lg font-bold mb-2">评分标准</h4>
+                            <p class="text-gray-600 mb-3">系统基于以下标准进行评分：</p>
+                            <ul class="list-disc pl-5 space-y-2 text-gray-600">
+                                <li>内容完整性（30分）</li>
+                                <li>逻辑结构（25分）</li>
+                                <li>语言表达（20分）</li>
+                                <li>论证深度（15分）</li>
+                                <li>格式规范（10分）</li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="text-lg font-bold mb-2">技术支持</h4>
+                            <p class="text-gray-600">如有问题或建议，请联系：</p>
+                            <p class="mt-2">
+                                <i class="fas fa-envelope mr-2 text-blue-600"></i>
+                                <span>support@grading-system.com</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部 -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-2xl"></i>
+                        <h3 class="text-xl font-bold">申论智能判卷系统</h3>
+                    </div>
+                    <p class="text-gray-400 mt-2">基于AI技术的申论智能辅助判卷平台</p>
+                </div>
+                <div class="text-gray-400">
+                    <p>© 2024 申论智能判卷系统. 保留所有权利.</p>
+                    <p class="mt-1">版本: 2.0.0 | 基于DeepSeek AI技术</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // API基础URL
+        const API_BASE_URL = window.location.origin + '/api';
+        
+        // 全局状态
+        let currentTaskId = null;
+        let pollInterval = null;
+        
+        // DOM元素
+        const elements = {
+            uploadForm: document.getElementById('uploadForm'),
+            pdfFile: document.getElementById('pdfFile'),
+            selectFileBtn: document.getElementById('selectFileBtn'),
+            dropZone: document.getElementById('dropZone'),
+            fileInfo: document.getElementById('fileInfo'),
+            fileName: document.getElementById('fileName'),
+            fileSize: document.getElementById('fileSize'),
+            removeFileBtn: document.getElementById('removeFileBtn'),
+            submitBtn: document.getElementById('submitBtn'),
+            
+            progressSection: document.getElementById('progressSection'),
+            progressText: document.getElementById('progressText'),
+            progressPercent: document.getElementById('progressPercent'),
+            progressFill: document.getElementById('progressFill'),
+            taskInfo: document.getElementById('taskInfo'),
+            taskId: document.getElementById('taskId'),
+            copyTaskIdBtn: document.getElementById('copyTaskIdBtn'),
+            
+            resultSection: document.getElementById('resultSection'),
+            totalScore: document.getElementById('totalScore'),
+            scoreLevel: document.getElementById('scoreLevel'),
+            scoreDetails: document.getElementById('scoreDetails'),
+            evaluation: document.getElementById('evaluation'),
+            downloadResultBtn: document.getElementById('downloadResultBtn'),
+            newUploadBtn: document.getElementById('newUploadBtn'),
+            
+            systemStatus: document.getElementById('systemStatus'),
+            todayCount: document.getElementById('todayCount'),
+            responseTime: document.getElementById('responseTime'),
+            memoryUsage: document.getElementById('memoryUsage'),
+            refreshSystemInfoBtn: document.getElementById('refreshSystemInfoBtn'),
+            
+            recentHistory: document.getElementById('recentHistory'),
+            viewAllHistoryBtn: document.getElementById('viewAllHistoryBtn'),
+            
+            historyBtn: document.getElementById('historyBtn'),
+            helpBtn: document.getElementById('helpBtn'),
+            
+            historyModal: document.getElementById('historyModal'),
+            closeHistoryModalBtn: document.getElementById('closeHistoryModalBtn'),
+            fullHistory: document.getElementById('fullHistory'),
+            
+            helpModal: document.getElementById('helpModal'),
+            closeHelpModalBtn: document.getElementById('closeHelpModalBtn'),
+        };
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initEventListeners();
+            loadSystemInfo();
+            loadRecentHistory();
+        });
+        
+        // 初始化事件监听器
+        function initEventListeners() {
+            // 文件选择
+            elements.selectFileBtn.addEventListener('click', () => elements.pdfFile.click());
+            elements.pdfFile.addEventListener('change', handleFileSelect);
+            
+            // 拖放文件
+            elements.dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                elements.dropZone.classList.add('border-blue-500', 'bg-blue-50');
+            });
+            
+            elements.dropZone.addEventListener('dragleave', () => {
+                elements.dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+            
+            elements.dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                elements.dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+                
+                if (e.dataTransfer.files.length > 0) {
+                    const file = e.dataTransfer.files[0];
+                    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                        updateFileInfo(file);
+                    } else {
+                        showError('请选择PDF文件');
+                    }
+                }
+            });
+            
+            // 移除文件
+            elements.removeFileBtn.addEventListener('click', () => {
+                elements.pdfFile.value = '';
+                elements.fileInfo.classList.add('hidden');
+                elements.dropZone.classList.remove('hidden');
+            });
+            
+            // 表单提交
+            elements.uploadForm.addEventListener('submit', handleSubmit);
+            
+            // 复制任务ID
+            elements.copyTaskIdBtn.addEventListener('click', copyTaskId);
+            
+            // 新上传
+            elements.newUploadBtn.addEventListener('click', resetForm);
+            
+            // 下载结果
+            elements.downloadResultBtn.addEventListener('click', downloadResult);
+            
+            // 刷新系统信息
+            elements.refreshSystemInfoBtn.addEventListener('click', loadSystemInfo);
+            
+            // 查看历史
+            elements.viewAllHistoryBtn.addEventListener('click', showHistoryModal);
+            elements.historyBtn.addEventListener('click', showHistoryModal);
+            elements.closeHistoryModalBtn.addEventListener('click', hideHistoryModal);
+            
+            // 帮助
+            elements.helpBtn.addEventListener('click', showHelpModal);
+            elements.closeHelpModalBtn.addEventListener('click', hideHelpModal);
+            
+            // 点击模态框外部关闭
+            [elements.historyModal, elements.helpModal].forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    updateFileInfo(file);
+                } else {
+                    showError('请选择PDF文件');
+                    elements.pdfFile.value = '';
+                }
+            }
+        }
+        
+        // 更新文件信息显示
+        function updateFileInfo(file) {
+            elements.fileName.textContent = file.name;
+            elements.fileSize.textContent = formatFileSize(file.size);
+            
+            elements.fileInfo.classList.remove('hidden');
+            elements.dropZone.classList.add('hidden');
+        }
+        
+        // 处理表单提交
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            // 验证表单
+            const userId = document.getElementById('userId').value;
+            const activationCode = document.getElementById('activationCode').value;
+            const file = elements.pdfFile.files[0];
+            
+            if (!userId || !activationCode) {
+                showError('请填写用户ID和激活码');
+                return;
+            }
+            
+            if (!file) {
+                showError('请选择PDF文件');
+                return;
+            }
+            
+            // 禁用提交按钮
+            elements.submitBtn.disabled = true;
+            elements.submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>上传中...';
+            
+            try {
+                // 显示进度区域
+                elements.progressSection.classList.remove('hidden');
+                elements.resultSection.classList.add('hidden');
+                
+                // 更新进度
+                updateProgress('正在上传文件...', 10);
+                
+                // 创建FormData
+                const formData = new FormData();
+                formData.append('user_id', userId);
+                formData.append('activation_code', activationCode);
+                formData.append('question', document.getElementById('question').value);
+                formData.append('file', file);
+                
+                // 发送请求
+                const response = await fetch(`${API_BASE_URL}/upload/pdf`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '上传失败');
+                }
+                
+                const result = await response.json();
+                
+                // 更新进度
+                updateProgress('文件上传成功，开始解析...', 30);
+                
+                // 显示任务信息
+                currentTaskId = result.task_id;
+                elements.taskId.textContent = currentTaskId;
+                elements.taskInfo.classList.remove('hidden');
+                
+                // 开始轮询任务状态
+                startPollingTaskStatus();
+                
+            } catch (error) {
+                showError(error.message);
+                resetSubmitButton();
+            }
+        }
+        
+        // 开始轮询任务状态
+        function startPollingTaskStatus() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+            
+            pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/task/status/${currentTaskId}`);
+                    const result = await response.json();
+                    
+                    switch (result.status) {
+                        case 'processing':
+                            updateProgress('AI正在判卷中...', 60);
+                            break;
+                            
+                        case 'completed':
+                            clearInterval(pollInterval);
+                            updateProgress('判卷完成！', 100);
+                            setTimeout(() => {
+                                showResult(result.result);
+                            }, 1000);
+                            break;
+                            
+                        case 'failed':
+                            clearInterval(pollInterval);
+                            showError(result.result?.error || '判卷失败');
+                            resetSubmitButton();
+                            break;
+                    }
+                    
+                } catch (error) {
+                    console.error('轮询任务状态失败:', error);
+                }
+            }, 2000); // 每2秒轮询一次
+        }
+        
+        // 显示结果
+        function showResult(result) {
+            // 更新总分
+            const totalScore = result.total_score || 0;
+            elements.totalScore.textContent = totalScore;
+            
+            // 更新评分等级
+            let scoreLevel = '';
+            if (totalScore >= 85) scoreLevel = '优秀';
+            else if (totalScore >= 70) scoreLevel = '良好';
+            else if (totalScore >= 60) scoreLevel = '及格';
+            else scoreLevel = '待提高';
+            elements.scoreLevel.textContent = scoreLevel;
+            
+            // 更新各项得分
+            elements.scoreDetails.innerHTML = '';
+            if (result.scores && typeof result.scores === 'object') {
+                Object.entries(result.scores).forEach(([key, value]) => {
+                    const scoreItem = document.createElement('div');
+                    scoreItem.className = 'flex justify-between items-center p-3 bg-gray-50 rounded-lg';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'text-gray-700';
+                    nameSpan.textContent = key;
+                    
+                    const valueSpan = document.createElement('span');
+                    valueSpan.className = 'font-bold';
+                    valueSpan.textContent = value;
+                    
+                    scoreItem.appendChild(nameSpan);
+                    scoreItem.appendChild(valueSpan);
+                    elements.scoreDetails.appendChild(scoreItem);
+                });
+            }
+            
+            // 更新评价
+            if (result.evaluation) {
+                elements.evaluation.innerHTML = `<p class="text-gray-700">${result.evaluation}</p>`;
+            }
+            
+            // 显示结果区域
+            elements.progressSection.classList.add('hidden');
+            elements.resultSection.classList.remove('hidden');
+            
+            // 重置提交按钮
+            resetSubmitButton();
+            
+            // 重新加载历史记录
+            loadRecentHistory();
+        }
+        
+        // 更新进度
+        function updateProgress(text, percent) {
+            elements.progressText.textContent = text;
+            elements.progressPercent.textContent = `${percent}%`;
+            elements.progressFill.style.width = `${percent}%`;
+        }
+        
+        // 复制任务ID
+        function copyTaskId() {
+            navigator.clipboard.writeText(currentTaskId)
+                .then(() => {
+                    showSuccess('任务ID已复制到剪贴板');
+                })
+                .catch(() => {
+                    showError('复制失败，请手动复制');
+                });
+        }
+        
+        // 重置表单
+        function resetForm() {
+            elements.uploadForm.reset();
+            elements.pdfFile.value = '';
+            elements.fileInfo.classList.add('hidden');
+            elements.dropZone.classList.remove('hidden');
+            elements.progressSection.classList.add('hidden');
+            elements.resultSection.classList.add('hidden');
+            elements.taskInfo.classList.add('hidden');
+            
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            
+            currentTaskId = null;
+            resetSubmitButton();
+        }
+        
+        // 下载结果
+        async function downloadResult() {
+            if (!currentTaskId) {
+                showError('没有可下载的结果');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/result/full/${currentTaskId}`);
+                const result = await response.json();
+                
+                // 创建下载链接
+                const dataStr = JSON.stringify(result, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `判卷结果_${currentTaskId}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showSuccess('结果下载成功');
+                
+            } catch (error) {
+                showError('下载失败: ' + error.message);
+            }
+        }
+        
+        // 加载系统信息
+        async function loadSystemInfo() {
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE_URL}/system/health`);
+                const result = await response.json();
+                const endTime = Date.now();
+                
+                // 更新响应时间
+                elements.responseTime.textContent = `${endTime - startTime} ms`;
+                
+                // 更新系统状态
+                if (result.status === 'healthy') {
+                    elements.systemStatus.className = 'status-badge status-completed';
+                    elements.systemStatus.textContent = '正常';
+                } else if (result.status === 'warning') {
+                    elements.systemStatus.className = 'status-badge status-pending';
+                    elements.systemStatus.textContent = '警告';
+                } else {
+                    elements.systemStatus.className = 'status-badge status-failed';
+                    elements.systemStatus.textContent = '异常';
+                }
+                
+                // 更新内存使用
+                if (result.metrics?.memory?.rss_mb) {
+                    elements.memoryUsage.textContent = `${Math.round(result.metrics.memory.rss_mb)} MB`;
+                }
+                
+                // 更新今日判卷数量（模拟）
+                elements.todayCount.textContent = Math.floor(Math.random() * 20) + 5;
+                
+            } catch (error) {
+                console.error('加载系统信息失败:', error);
+                elements.systemStatus.className = 'status-badge status-failed';
+                elements.systemStatus.textContent = '连接失败';
+            }
+        }
+        
+        // 加载最近历史
+        async function loadRecentHistory() {
+            try {
+                // 模拟历史数据
+                const mockHistory = [
+                    {
+                        id: 'task_001',
+                        created_at: '2024-01-15 14:30:00',
+                        total_score: 85,
+                        summary: '结构清晰，论证充分',
+                        status: 'completed'
+                    },
+                    {
+                        id: 'task_002',
+                        created_at: '2024-01-14 10:15:00',
+                        total_score: 72,
+                        summary: '内容完整，语言表达有待提高',
+                        status: 'completed'
+                    },
+                    {
+                        id: 'task_003',
+                        created_at: '2024-01-13 16:45:00',
+                        total_score: 68,
+                        summary: '基本符合要求',
+                        status: 'completed'
+                    }
+                ];
+                
+                elements.recentHistory.innerHTML = '';
+                
+                if (mockHistory.length === 0) {
+                    elements.recentHistory.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-inbox text-3xl mb-3"></i>
+                            <p>暂无历史记录</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                mockHistory.forEach(item => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition';
+                    
+                    const scoreColor = item.total_score >= 85 ? 'text-green-600' : 
+                                     item.total_score >= 70 ? 'text-blue-600' : 
+                                     item.total_score >= 60 ? 'text-amber-600' : 'text-red-600';
+                    
+                    historyItem.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <p class="font-medium">${formatDate(item.created_at)}</p>
+                                <p class="text-sm text-gray-500">${item.summary}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-2xl font-bold ${scoreColor}">${item.total_score}</p>
+                                <p class="text-sm text-gray-500">总分</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-500">ID: ${item.id}</span>
+                            <span class="status-badge ${getStatusClass(item.status)}">${getStatusText(item.status)}</span>
+                        </div>
+                    `;
+                    
+                    elements.recentHistory.appendChild(historyItem);
+                });
+                
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+            }
+        }
+        
+        // 显示历史模态框
+        async function showHistoryModal() {
+            // 加载完整历史（这里可以调用API）
+            elements.fullHistory.innerHTML = `
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-history text-4xl mb-4"></i>
+                    <p class="text-lg mb-2">历史记录功能</p>
+                    <p class="text-sm">完整的历史记录功能需要连接到后端API</p>
+                    <p class="text-sm mt-2">当前显示为模拟数据</p>
+                </div>
+            `;
+            
+            elements.historyModal.classList.remove('hidden');
+        }
+        
+        // 隐藏历史模态框
+        function hideHistoryModal() {
+            elements.historyModal.classList.add('hidden');
+        }
+        
+        // 显示帮助模态框
+        function showHelpModal() {
+            elements.helpModal.classList.remove('hidden');
+        }
+        
+        // 隐藏帮助模态框
+        function hideHelpModal() {
+            elements.helpModal.classList.add('hidden');
+        }
+        
+        // 重置提交按钮
+        function resetSubmitButton() {
+            elements.submitBtn.disabled = false;
+            elements.submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>开始判卷';
+        }
+        
+        // 显示成功消息
+        function showSuccess(message) {
+            showNotification(message, 'success');
+        }
+        
+        // 显示错误消息
+        function showError(message) {
+            showNotification(message, 'error');
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            // 移除现有的通知
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = `notification fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+                type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
+                'bg-blue-100 text-blue-800 border border-blue-200'
+            }`;
+            
+            const icon = type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-circle' :
+                        'fa-info-circle';
+            
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${icon} mr-3 text-lg"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // 工具函数
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        function getStatusClass(status) {
+            switch (status) {
+                case 'completed': return 'status-completed';
+                case 'processing': return 'status-processing';
+                case 'pending': return 'status-pending';
+                case 'failed': return 'status-failed';
+                default: return 'status-pending';
+            }
+        }
+        
+        function getStatusText(status) {
+            switch (status) {
+                case 'completed': return '已完成';
+                case 'processing': return '处理中';
+                case 'pending': return '等待中';
+                case 'failed': return '失败';
+                default: return status;
+            }
+        }
+    </script>
+</body>
+</html>
